@@ -52,7 +52,7 @@ summary(out.imph2, perms= perm.imph2, alpha = 0.05, pvalues = TRUE)
 qtl_col_sha <- makeqtl(col_sha, chr = 5, pos = 12.3, what = "draws")
 col_sha_qtl_model <- addqtl(col_sha, qtl = qtl_col_sha, method = "imp", 
                             pheno.col = 3)
-summary(col_sha_qtl_model, perms = perm.imph2, alpha = 0.1, pvalues = TRUE)
+summary(col_sha_qtl_model, perms = perm.imph2, alpha = 0.05, pvalues = TRUE)
 plot(col_sha_qtl_model, ylab = "LOD Score")
 abline(h = perm95, lty = 2)
 
@@ -80,7 +80,7 @@ scantwo_col_sha_perm <- scantwo(col_sha, pheno.col = 3, method = "imp",
 summary(scantwo_col_sha_perm)
 summary(scantwo_col_sha, perms = scantwo_col_sha_perm, thresholds = c(5.54, 4.1, 3.45, 4.43, 2.48))
 summary(rqtl_col_sha)
-plot(scantwo_col_sha, lower = "av1", main = "2D QTL Scan")
+plot(scantwo_col_sha, main = "2D QTL Scan")
 
 mar14 <- find.marker(col_sha, chr = c(1, 4), pos = c(40, 81))
 mar15 <- find.marker(col_sha, chr = c(1, 5), pos = c(38, 13))
@@ -106,30 +106,38 @@ summary(scantwo_col_sha, perms = scantwo_col_sha_perm, thresholds = c(5.54, 4.1,
 summary(rqtl_col_sha)
 
 col_sha <- sim.geno(col_sha, step = 0.1, n.draws = 128, error.prob = 0.001)
-qtl_col_sha_2D <- makeqtl(col_sha, chr = c(1, 4, 5, 5), pos = c(40, 62, 13, 80))
+qtl_col_sha_2D <- makeqtl(col_sha, chr = c(1, 2, 4, 5, 5), pos = c(40, 41, 62, 13, 80))
 plot(qtl_col_sha_2D)
 qtl_col_sha_2D_fq <- fitqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3, 
-                            formula = y ~ Q1 + Q2 * Q3 + Q4, method = "imp")
+                            formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5, method = "imp")
 summary(qtl_col_sha_2D_fq)
 qtl_col_sha_2D_fq2 <- fitqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3, 
-                            formula = y ~ Q1 + Q2 * Q3 + Q4, method = "imp", 
+                            formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5, method = "imp", 
                             dropone = FALSE, get.ests = TRUE)
 summary(qtl_col_sha_2D_fq2)
 rqtl_col_sha_2D <- refineqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3,
-                             method = "imp", formula = y ~ Q1 + Q2 * Q3 + Q4)
+                             method = "imp", formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5)
 qtl_col_sha_2D_fq3 <- fitqtl(col_sha, qtl = rqtl_col_sha_2D, pheno.col = 3, 
-                             method = "imp", formula = y ~ Q1 + Q2 * Q3 + Q4)
+                             method = "imp", formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5)
 
 summary(qtl_col_sha_2D_fq)
 summary(qtl_col_sha_2D_fq3)
 
 plotLodProfile(rqtl_col_sha_2D, ylab = "Profile LOD Score")
 
-addint(col_sha, qtl = rqtl_col_sha_2D, formula = y ~ Q1 + Q2 * Q3 + Q4, 
+addint(col_sha, qtl = rqtl_col_sha_2D, formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5, 
        pheno.col = 3, method = "imp")
 
 qtl_col_sha_2D_aq <- addqtl(col_sha, qtl = rqtl_col_sha_2D, pheno.col = 3, 
-                            method = "imp", formula = y ~ Q1 + Q2 * Q3 + Q4)
+                            method = "imp", formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5)
+max(qtl_col_sha_2D_aq)
+plot(qtl_col_sha_2D_aq, ylab = "LOD Score")
+
+#Didn't run because time consuming
+qtl_col_sha_2D_ap <- addpair(col_sha, qtl = rqtl_col_sha_2D, pheno.col = 3,  
+                             formula = y ~ Q1 + Q2 * Q3 + Q4)
 #MQM Code
 #Augments the data (basically imputes the data)
-mqm_col_sha <- mqmaugment(col_sha, minprob =  0.925, verbose = TRUE)
+aug_col_sha <- mqmaugment(col_sha, minprob =  0.925, verbose = TRUE)
+geno.image(aug_col_sha)
+mqm_one_col_sha <- scanone(col_sha, pheno.col = 3, method = "imp", )
