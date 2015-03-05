@@ -242,43 +242,60 @@ summary(qtl_col_sha_2D_fq5)
 #Didn't run because time consuming
 qtl_col_sha_2D_ap <- addpair(col_sha, qtl = qtl_col_sha_2D_ref2, pheno.col = 3, 
                              method =  "imp",  
-                             formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6, )
-#MQM Code
+                             formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6)
+
+#MQM Code-----------------------------------------------------------------------
 
 #Augments the data (basically imputes the data)
 aug_col_sha <- mqmaugment(col_sha, minprob =  0.925, verbose = TRUE)
 geno.image(aug_col_sha)
 
-mqm_one_col_sha <- scanone(col_sha, pheno.col = 3, method = "imp")
-mqm_col_sha <- mqmscan(aug_col_sha, pheno.col = 3, n.clusters = 4)
-plot(mqm_one_col_sha, mqm_col_sha, col = c("red", "blue"), lty = 1:2)
+#Comparison of single-QTL analysis scan (on original data) and mqmscan on 
+#augmented data
+one_mqm_col_sha <- scanone(col_sha, pheno.col = 3, method = "imp")
+scan_mqm_col_sha <- mqmscan(aug_col_sha, pheno.col = 3, n.clusters = 4)
+plot(one_mqm_col_sha, scan_mqm_col_sha, col = c("red", "blue"), lty = 1:2)
+abline(h = perm95)
+summary(scan_mqm_col_sha)
 
-max(mqm_col_sha)
-mqm_markers <- mqmextractmarkers(mqm_col_sha)
-find.marker(aug_col_sha, chr = 5, pos = 10)
-mqm_mts <- find.markerindex(aug_col_sha, "Chr5_2572017")
+#Finding markers that have significant LOD scores in the mqmscan, and then 
+#setting them as cofactors to find additional QTLs
+markers_mqm <- find.marker(aug_col_sha, chr = c(1, 4, 5), pos = c(40, 80, 10))
+mqm_mts <- find.markerindex(aug_col_sha, name = markers_mqm)
 mqm_cofactors <- mqmsetcofactors(aug_col_sha, cofactors = mqm_mts)
-mqm_col_sha_co1 <- mqmscan(aug_col_sha, cofactors = mqm_cofactors, pheno.col = 3)
+mqm_col_sha_co1 <- mqmscan(aug_col_sha, cofactors = mqm_cofactors, 
+                           multicore = 4, pheno.col = 3)
 plot(mqm_col_sha_co1)
 summary(mqm_col_sha_co1)
 
-mqm_mts2 <- c(mqm_mts, 
-              find.markerindex(aug_col_sha, find.marker(aug_col_sha, 1, 40)))
-mqm_cofactors2 <- mqmsetcofactors(aug_col_sha, cofactors = mqm_mts2)
-mqm_col_sha_co2 <- mqmscan(aug_col_sha, cofactors = mqm_mts2, pheno.col = 3, 
+#Doing backwards method of finding cofactors
+
+#Setting automatic cofactors (50 of them)
+auto_col_sha <- mqmautocofactors(aug_col_sha, 50)
+auto_mqm_col_sha <- mqmscan(aug_col_sha, auto_col_sha, pheno.col = 3, 
+                            multicore = 4)
+
+#Setting every 5th marker as a cofactor and then analyzing for QTLs
+set_col_sha <- mqmsetcofactors(aug_col_sha, 5)
+set_mqm_col_sha <- mqmscan(aug_col_sha, set_col_sha, pheno.col = 3, 
                            multicore = 4)
-plot(mqm_col_sha_co2, ylim = c(-100, 100))
-summary(mqm_col_sha_co2)
-
-plot(mqm_col_sha_co1, mqm_col_sha_co2, col = c("blue", "green"), lty = 1:2, 
-     ylim = c(-50, 100))
-
-mqm_col_sha_aco <- mqmautocofactors(aug_col_sha, 50)
-mqm_col_sha_auto <- mqmscan(aug_col_sha, mqm_col_sha_aco, pheno.col = 3, 
-                            multicore = 4)
-mqm_col_sha_sco <- mqmsetcofactors(aug_col_sha, 5)
-mqm_col_sha_back <- mqmscan(aug_col_sha, mqm_col_sha_sco, pheno.col = 3, 
-                            multicore = 4)
+summary(auto_mqm_col_sha)
+summary(set_mqm_col_sha)
 par(mfrow = c(2, 1))
-plot(mqm_col_sha_auto, mqm_col_sha_back)
+plot(auto_mqm_col_sha, set_mqm_col_sha, out.imph2, 
+     col = c("blue", "green", "red"), lty = 1:3)
+par(mfrow = c(2, 2))
 
+#Checking putative QTL locations in mqm backwards models and forward selection 
+#QTL model
+plot(mqmgetmodel(auto_mqm_col_sha))
+plot(mqmgetmodel(set_mqm_col_sha))
+plot(qtl_col_sha_2D_ref2)
+
+#Setting permutations to find QTL significance thresholds
+mqm.perm <- mqmpermutation(aug_col_sha, scanfunction = mqmscan, 
+                           cofactors = set_col_sha, pheno.col = 3, 
+                           batchsize = 25, n.perm = 10)
+mqm.perm.process <- mqmprocesspermutation(mqm.perm)
+summary(mqm.perm.process)
+mqmplot.permutations(mqm.perm, legend = FALSE)
