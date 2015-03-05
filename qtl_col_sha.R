@@ -44,7 +44,7 @@ perm.imph2 <- scanone(col_sha, method = "imp", pheno.col = 3, n.perm = 5000,
 summary(perm.imph2)
 perm95 <- summary(perm.imph2)[1]
 
-plot(out.imph2, out.emh2, col = c("blue", "red"), ylab = "LOD Score", lty = 1:2)
+plot(out.imph2, ylab = "LOD Score")
 abline(h = perm95, lty = 2)
 
 summary(out.imph2, perms= perm.imph2, alpha = 0.05, pvalues = TRUE)
@@ -80,6 +80,7 @@ scantwo_col_sha_perm <- scantwo(col_sha, pheno.col = 3, method = "imp",
 summary(scantwo_col_sha_perm)
 summary(scantwo_col_sha, perms = scantwo_col_sha_perm, thresholds = c(5.54, 4.1, 3.45, 4.43, 2.48))
 summary(rqtl_col_sha)
+#Interactions on chromosome 4 with 5, but also an additive QTL too
 plot(scantwo_col_sha, main = "2D QTL Scan")
 
 mar14 <- find.marker(col_sha, chr = c(1, 4), pos = c(40, 81))
@@ -106,24 +107,45 @@ summary(scantwo_col_sha, perms = scantwo_col_sha_perm, thresholds = c(5.54, 4.1,
 summary(rqtl_col_sha)
 
 col_sha <- sim.geno(col_sha, step = 0.1, n.draws = 128, error.prob = 0.001)
-qtl_col_sha_2D <- makeqtl(col_sha, chr = c(1, 2, 4, 5, 5), pos = c(40, 41, 62, 13, 80))
+qtl_col_sha_2D <- makeqtl(col_sha, chr = c(1, 2, 4, 4, 5, 5), pos = c(40, 41, 11, 80, 13, 80))
 plot(qtl_col_sha_2D)
+#Stick another QTL in chromosome 4
 qtl_col_sha_2D_fq <- fitqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3, 
                             formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5, method = "imp")
 summary(qtl_col_sha_2D_fq)
+
 qtl_col_sha_2D_fq2 <- fitqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3, 
-                            formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5, method = "imp", 
+                            formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5, 
+                            method = "imp", 
                             dropone = FALSE, get.ests = TRUE)
 summary(qtl_col_sha_2D_fq2)
-rqtl_col_sha_2D <- refineqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3,
-                             method = "imp", formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5)
-qtl_col_sha_2D_fq3 <- fitqtl(col_sha, qtl = rqtl_col_sha_2D, pheno.col = 3, 
-                             method = "imp", formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5)
 
+rqtl_col_sha_2D <- refineqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3,
+                             method = "imp", 
+                             formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5)
+
+qtl_col_sha_2D_fq3 <- fitqtl(col_sha, qtl = rqtl_col_sha_2D, pheno.col = 3, 
+                             method = "imp", 
+                             formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5)
+
+qtl_col_sha_2D_fq4 <- fitqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3, 
+                             method = "imp", 
+                             formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6)
 summary(qtl_col_sha_2D_fq)
 summary(qtl_col_sha_2D_fq3)
+summary(qtl_col_sha_2D_fq4)
 
-plotLodProfile(rqtl_col_sha_2D, ylab = "Profile LOD Score")
+rqtl2_col_sha_2D <- refineqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3, 
+                              method = "imp", 
+                              formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6)
+summary(rqtl2_col_sha_2D)
+
+final_qtl_col_sha_2D <- fitqtl(col_sha, qtl = rqtl2_col_sha_2D, pheno.col = 3, 
+                               method = "imp", 
+                               formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6)
+summary(final_qtl_col_sha_2D)
+
+plotLodProfile(rqtl2_col_sha_2D, ylab = "Profile LOD Score")
 
 addint(col_sha, qtl = rqtl_col_sha_2D, formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5, 
        pheno.col = 3, method = "imp")
@@ -137,7 +159,18 @@ plot(qtl_col_sha_2D_aq, ylab = "LOD Score")
 qtl_col_sha_2D_ap <- addpair(col_sha, qtl = rqtl_col_sha_2D, pheno.col = 3,  
                              formula = y ~ Q1 + Q2 * Q3 + Q4)
 #MQM Code
+
 #Augments the data (basically imputes the data)
 aug_col_sha <- mqmaugment(col_sha, minprob =  0.925, verbose = TRUE)
 geno.image(aug_col_sha)
-mqm_one_col_sha <- scanone(col_sha, pheno.col = 3, method = "imp", )
+
+mqm_one_col_sha <- scanone(col_sha, pheno.col = 3, method = "imp")
+mqm_col_sha <- mqmscan(aug_col_sha, pheno.col = 3, n.clusters = 4)
+plot(mqm_one_col_sha, mqm_col_sha, col = c("red", "blue"), lty = 1:2)
+
+max(mqm_col_sha)
+mqm_markers <- mqmextractmarkers(mqm_col_sha)
+find.marker(aug_col_sha, chr = 5, pos = 10)
+mqm_mts <- find.markerindex(aug_col_sha, "Chr5_2572017")
+mqm_cofactors <- mqmsetcofactors(aug_col_sha, cofactors = mqm_mts)
+mqm_col_sha_co1 <- mqmscan(aug_col_sha, cofactors = mqm_cofactors, pheno.col = 3)
