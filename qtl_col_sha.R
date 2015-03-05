@@ -1,26 +1,41 @@
+#Load qtl package for QTL mapping and snow package for multicore processing
 library(qtl)
+library(snow)
+require(snow)
+
+#Set working directory with data
 setwd("/Users/jkta/Desktop/data/")
 
+#Reads QTL data
 col_sha <- read.cross(format = "csv", file = "col_sha_qtl_final2.csv",
-                     genotypes = c("AA", "BB"))
+                      genotypes = c("AA", "BB"))
 
+#Plot colxsha data to make sure there are no wonky phenotypes
 summary(col_sha)
 plot(col_sha)
 
+#Estimates recombination frations between chromosomes to see if there are no linked
+#markers between different chromosomes
 col_sha <- est.rf(col_sha)
 plot.rf(col_sha)
 
+#Estimates a genetic map using MLE
 newmap <- est.map(col_sha, verbose = TRUE, error.prob = 0.001)
 plot.map(col_sha, newmap)
 replace.map(col_sha, newmap)
 plot.map(col_sha)
 
+#Calculates error LODs with specific markers, to make sure there are no 
+#genotyping errors
 col_sha <- calc.errorlod(col_sha, error.prob = 0.001)
 top.errorlod(col_sha, cutoff = 3)
 
+#Simulates genotypes between markers, and calculates their genotype 
+#probabilities for use in interval mapping
 col_sha <- sim.geno(col_sha, n.draws = 64, step = 1, error.prob = 0.001)
 col_sha <- calc.genoprob(col_sha, step = 1, error.prob = 0.01)
 
+#Uses a bunch of different methods to analyze QTLs
 out.mrh2 <- scanone(col_sha, method = "mr", pheno.col = 3)
 out.emh2 <- scanone(col_sha, method = "em", pheno.col = 3)
 out.hkh2 <- scanone(col_sha, method = "hk", pheno.col = 3)
@@ -39,55 +54,79 @@ plot(out.ehkh2 - out.hkh2, ylim = c(-0.5, 1), ylab = "LOD[EHK] - LOD[HK]")
 
 col_sha <- sim.geno(col_sha, step = 1, n.draws = 64, error.prob = 0.001)
 out.imph2 <- scanone(col_sha, method = "imp", pheno.col = 3, n.cluster = 4)
+
+#Permutes the data to derive LOD scores; this is done by "freezing" the 
+#genotypes and randomly assigning phenotypes. Threshold for background noise.
 perm.imph2 <- scanone(col_sha, method = "imp", pheno.col = 3, n.perm = 5000, 
                       verbose = TRUE, n.cluster = 4)
+
+#Assign the 5% significance threshold so that we can visually inspect the LOD 
+#score cutoff.
 summary(perm.imph2)
 perm95 <- summary(perm.imph2)[1]
 
+#Plotting the single-QTL analysis with LOD threshold; evidence of QTLs on 
+#Chr 1, 4, and 5 (possibly 2 on 5)
 plot(out.imph2, ylab = "LOD Score")
 abline(h = perm95, lty = 2)
+summary(out.imph2, perms = perm.imph2, alpha = 0.05, pvalues = TRUE)
 
-summary(out.imph2, perms= perm.imph2, alpha = 0.05, pvalues = TRUE)
-
+#Building a single QTL model by adding highest LOD marker on Chr 5
 qtl_col_sha <- makeqtl(col_sha, chr = 5, pos = 12.3, what = "draws")
+summary(qtl_col_sha)
+
+#Checking for other significant QTLs
 col_sha_qtl_model <- addqtl(col_sha, qtl = qtl_col_sha, method = "imp", 
                             pheno.col = 3)
+
+#Statistically checks for other QTLs based on our permutation data; additional
+#QTLs on Chr 1, 4 and another on 5
 summary(col_sha_qtl_model, perms = perm.imph2, alpha = 0.05, pvalues = TRUE)
 plot(col_sha_qtl_model, ylab = "LOD Score")
-abline(h = perm95, lty = 2)
 
-qtl1_col_sha <- makeqtl(cross = col_sha, chr = c(1, 2, 4, 5, 5), 
-                pos = c(37.7, 37.0, 80.7, 79.6, 12.3), 
+
+#Adding additional QTLs to our model with other putative QTL positions
+qtl1_col_sha <- makeqtl(cross = col_sha, chr = c(1, 4, 5, 5), 
+                pos = c(37.7, 81, 12.3, 79.6), 
                 what = "draws")
 
+#Refines the location of our QTLs using MLE
 rqtl_col_sha <- refineqtl(col_sha, qtl = qtl1_col_sha, method = "imp", 
                           pheno.col = 3)
-
-options(width = 64)
-rqtl_col_sha
-
 summary(fitqtl(col_sha, qtl = rqtl_col_sha, method = "imp", pheno.col = 3))
+
+#Checks for any interactions between QTLs in our 4 QTL model
 addint(col_sha, qtl = rqtl_col_sha, qtl.only = TRUE, method = "imp", 
        pheno.col = 3)
 
 plot(rqtl_col_sha)
 
+#2D scan for QTLs; pairwise comparison for each interval location between 
+#chromosomes
 scantwo_col_sha <- scantwo(col_sha, pheno.col = 3, method = "imp", 
                            verbose = TRUE, n.cluster = 4)
+
+#Generates thresholds for our 2D scan
 scantwo_col_sha_perm <- scantwo(col_sha, pheno.col = 3, method = "imp", 
                                 n.perm = 1000, n.cluster = 8)
-
 summary(scantwo_col_sha_perm)
+
+#Determines putative QTLs and their locations based on our thresholds
 summary(scantwo_col_sha, perms = scantwo_col_sha_perm, thresholds = c(5.54, 4.1, 3.45, 4.43, 2.48))
 summary(rqtl_col_sha)
-#Interactions on chromosome 4 with 5, but also an additive QTL too
+
+#Confirms our QTL model based on our single-QTL analysis
+#QTLs on Chr 1, 4, and 5
 plot(scantwo_col_sha, main = "2D QTL Scan")
 
+#Finding markers based on the positions of significant QTLs in 2D scan
 mar14 <- find.marker(col_sha, chr = c(1, 4), pos = c(40, 81))
 mar15 <- find.marker(col_sha, chr = c(1, 5), pos = c(38, 13))
 mar45 <- find.marker(col_sha, chr = c(4, 5), pos = c(62, 13))
 mar55 <- find.marker(col_sha, chr = c(5, 5), pos = c(11, 80))
 
+#Phenotype and effect plots between markers; all paired markers seem additive
+#except for significant markers on Chr 4 and 5
 par(mfrow = c(1, 2))
 plot.pxg(col_sha, marker = mar14, pheno.col = 3)
 effectplot(col_sha, mname1 = mar14[1], mname2 = mar14[2], pheno.col = 3, 
@@ -102,64 +141,108 @@ plot.pxg(col_sha, marker = mar55, pheno.col = 3)
 effectplot(col_sha, mname1 = mar55[1], mname2 = mar55[2], pheno.col = 3,
            add.legend = FALSE)
 
+#Comparing putative QTLs between our single-QTL analysis and 2D scan
 summary(out.imph2, perms= perm.imph2, alpha = 0.05, pvalues = TRUE)
 summary(scantwo_col_sha, perms = scantwo_col_sha_perm, thresholds = c(5.54, 4.1, 3.45, 4.43, 2.48))
-summary(rqtl_col_sha)
 
+#QTL model based on our 2D results
 col_sha <- sim.geno(col_sha, step = 0.1, n.draws = 128, error.prob = 0.001)
-qtl_col_sha_2D <- makeqtl(col_sha, chr = c(1, 2, 4, 4, 5, 5), pos = c(40, 41, 11, 80, 13, 80))
+qtl_col_sha_2D <- makeqtl(col_sha, chr = c(1, 4, 5, 5), pos = c(40, 81, 12, 80))
 plot(qtl_col_sha_2D)
-
 qtl_col_sha_2D_fq <- fitqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3, 
-                            formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5, method = "imp")
+                            formula = y ~ Q1 + Q2 * Q3 + Q4, method = "imp")
+
+#QTLs seem significant except for the interaction between Chr 4 and 5
 summary(qtl_col_sha_2D_fq)
 
-qtl_col_sha_2D_fq2 <- fitqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3, 
-                            formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5, 
+#Refine positions of our 2D QTL model
+qtl_col_sha_2D_ref <- refineqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3,
+                                method = "imp", formula = y ~ Q1 + Q2 * Q3 + Q4)
+summary(qtl_col_sha_2D_ref)
+
+#Fit QTL model with our new positions; all QTLs are still significant, but the
+#interaction between Chr 4 and 5 (between pos 12.2 and 12.6, respectively) are
+#now significant
+qtl_col_sha_2D_fq1 <- fitqtl(col_sha, qtl = qtl_col_sha_2D_ref, pheno.col = 3,
+                          method = "imp", formula = y ~ Q1 + Q2 * Q3 + Q4)
+summary(qtl_col_sha_2D_fq1)
+
+#Checks to see if there are additional QTLs that could be added to our model 
+#based on a single-QTL scan
+qtl_col_sha_2D_aq <- addqtl(col_sha, qtl = qtl_col_sha_2D_ref, pheno.col = 3, 
                             method = "imp", 
-                            dropone = FALSE, get.ests = TRUE)
+                            formula = y ~ Q1 + Q2 * Q3 + Q4)
+
+#Potentially additional putative QTLs on Chr 2 and 4; their LOD > 2
+max(qtl_col_sha_2D_aq)
+plot(qtl_col_sha_2D_aq, ylab = "LOD Score")
+summary(qtl_col_sha_2D_aq)
+
+#New QTL model based on these additional QTLs
+qtl_col_sha_2D_rv1 <- makeqtl(col_sha, chr = c(1, 2, 4, 4, 5, 5), 
+                              pos = c(37.2, 37.2, 12.2, 62, 12.6, 77.3))
+plot(qtl_col_sha_2D_rv1)
+
+qtl_col_sha_2D_fq2 <- fitqtl(col_sha, qtl = qtl_col_sha_2D_rv1, pheno.col = 3, 
+                             formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6, 
+                             method = "imp", get.ests = TRUE)
+
+#All QTLs seem significant
 summary(qtl_col_sha_2D_fq2)
 
-rqtl_col_sha_2D <- refineqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3,
-                             method = "imp", 
-                             formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5)
+#Refining our new expanded model
+qtl_col_sha_2D_ref2 <- refineqtl(col_sha, qtl = qtl_col_sha_2D_rv1, 
+                                 pheno.col = 3, method = "imp", 
+                                 formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6)
+summary(qtl_col_sha_2D_ref2)
 
-qtl_col_sha_2D_fq3 <- fitqtl(col_sha, qtl = rqtl_col_sha_2D, pheno.col = 3, 
-                             method = "imp", 
-                             formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5)
+#Refine QTL LOD increased by 0.8
+qtl_col_sha_2D_fq3 <- fitqtl(col_sha, qtl = qtl_col_sha_2D_ref2, pheno.col = 3, 
+                             formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6, 
+                             method = "imp", get.ests = TRUE)
 
-qtl_col_sha_2D_fq4 <- fitqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3, 
-                             method = "imp", 
-                             formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6)
-summary(qtl_col_sha_2D_fq)
+#Comparison of 4 QTL model vs 6 QTL model; 22 vs 29 LOD, and 54% vs 65% variance
+#explained
 summary(qtl_col_sha_2D_fq3)
-summary(qtl_col_sha_2D_fq4)
+summary(qtl_col_sha_2D_fq)
 
-rqtl2_col_sha_2D <- refineqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3, 
-                              method = "imp", 
-                              formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6)
-summary(rqtl2_col_sha_2D)
-
-final_qtl_col_sha_2D <- fitqtl(col_sha, qtl = rqtl2_col_sha_2D, pheno.col = 3, 
-                               method = "imp", 
-                               formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6)
-summary(final_qtl_col_sha_2D)
-
-plotLodProfile(rqtl2_col_sha_2D, ylab = "Profile LOD Score")
-
-addint(col_sha, qtl = rqtl2_col_sha_2D, 
+#Possible interaction between both QTLs on Chr 5
+addint(col_sha, qtl = qtl_col_sha_2D_ref2, 
        formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6, 
        pheno.col = 3, method = "imp")
 
-qtl_col_sha_2D_aq <- addqtl(col_sha, qtl = rqtl2_col_sha_2D, pheno.col = 3, 
+#The included QTL interaction on Chr 5 don't seem that significant in our model
+qtl_col_sha_2D_fq4 <- fitqtl(col_sha, qtl = qtl_col_sha_2D_ref2, pheno.col = 3, 
+                             formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q5 * Q6, 
+                             method = "imp", get.ests = TRUE)
+summary(qtl_col_sha_2D_fq4)
+
+#Checking for additional QTLs; putative QTLs on Chr 1 and 5; LOD > 1
+qtl_col_sha_2D_aq1 <- addqtl(col_sha, qtl = qtl_col_sha_2D_ref2, pheno.col = 3, 
                             method = "imp", 
                             formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6)
-max(qtl_col_sha_2D_aq)
-plot(qtl_col_sha_2D_aq, ylab = "LOD Score")
+max(qtl_col_sha_2D_aq1)
+plot(qtl_col_sha_2D_aq1, ylab = "LOD Score")
+summary(qtl_col_sha_2D_aq1)
+summary(qtl_col_sha_2D_ref2)
+
+#Adding the 2 QTLs to our model
+qtl_col_sha_2D_rv2 <- makeqtl(col_sha, chr = c(1, 1, 2, 4, 4, 5, 5, 5), 
+                              pos = c(25.5, 37.2, 39.6, 12.2, 
+                                      81.5, 12.6, 55.5, 81.1))
+plot(qtl_col_sha_2D_rv2)
+
+#Only the additional QTL on 1 is significant, but the additional QTL on Chr 1 
+#might be an artifact because it is close to the other QTL on Chr 1 (<12 cM)
+qtl_col_sha_2D_fq5 <- fitqtl(col_sha, qtl = qtl_col_sha_2D_rv2, pheno.col = 3, 
+                             formula = y ~ Q1 + Q2 + Q3 + Q4 * Q6 + Q5 + Q7 + Q8, 
+                             method = "imp", get.ests = TRUE)
+summary(qtl_col_sha_2D_fq5)
 
 #Didn't run because time consuming
-qtl_col_sha_2D_ap <- addpair(col_sha, qtl = rqtl_col_sha_2D, pheno.col = 3,  
-                             formula = y ~ Q1 + Q2 * Q3 + Q4)
+qtl_col_sha_2D_ap <- addpair(col_sha, qtl = qtl_col_sha_2D_ref2, pheno.col = 3, 
+                             method =  "imp",  
+                             formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6, )
 #MQM Code
 
 #Augments the data (basically imputes the data)
