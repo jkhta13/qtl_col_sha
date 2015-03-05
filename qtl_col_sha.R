@@ -109,7 +109,7 @@ summary(rqtl_col_sha)
 col_sha <- sim.geno(col_sha, step = 0.1, n.draws = 128, error.prob = 0.001)
 qtl_col_sha_2D <- makeqtl(col_sha, chr = c(1, 2, 4, 4, 5, 5), pos = c(40, 41, 11, 80, 13, 80))
 plot(qtl_col_sha_2D)
-#Stick another QTL in chromosome 4
+
 qtl_col_sha_2D_fq <- fitqtl(col_sha, qtl = qtl_col_sha_2D, pheno.col = 3, 
                             formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5, method = "imp")
 summary(qtl_col_sha_2D_fq)
@@ -147,11 +147,13 @@ summary(final_qtl_col_sha_2D)
 
 plotLodProfile(rqtl2_col_sha_2D, ylab = "Profile LOD Score")
 
-addint(col_sha, qtl = rqtl_col_sha_2D, formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5, 
+addint(col_sha, qtl = rqtl2_col_sha_2D, 
+       formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6, 
        pheno.col = 3, method = "imp")
 
-qtl_col_sha_2D_aq <- addqtl(col_sha, qtl = rqtl_col_sha_2D, pheno.col = 3, 
-                            method = "imp", formula = y ~ Q1 + Q2 + Q3 * Q4 + Q5)
+qtl_col_sha_2D_aq <- addqtl(col_sha, qtl = rqtl2_col_sha_2D, pheno.col = 3, 
+                            method = "imp", 
+                            formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6)
 max(qtl_col_sha_2D_aq)
 plot(qtl_col_sha_2D_aq, ylab = "LOD Score")
 
@@ -174,3 +176,26 @@ find.marker(aug_col_sha, chr = 5, pos = 10)
 mqm_mts <- find.markerindex(aug_col_sha, "Chr5_2572017")
 mqm_cofactors <- mqmsetcofactors(aug_col_sha, cofactors = mqm_mts)
 mqm_col_sha_co1 <- mqmscan(aug_col_sha, cofactors = mqm_cofactors, pheno.col = 3)
+plot(mqm_col_sha_co1)
+summary(mqm_col_sha_co1)
+
+mqm_mts2 <- c(mqm_mts, 
+              find.markerindex(aug_col_sha, find.marker(aug_col_sha, 1, 40)))
+mqm_cofactors2 <- mqmsetcofactors(aug_col_sha, cofactors = mqm_mts2)
+mqm_col_sha_co2 <- mqmscan(aug_col_sha, cofactors = mqm_mts2, pheno.col = 3, 
+                           multicore = 4)
+plot(mqm_col_sha_co2, ylim = c(-100, 100))
+summary(mqm_col_sha_co2)
+
+plot(mqm_col_sha_co1, mqm_col_sha_co2, col = c("blue", "green"), lty = 1:2, 
+     ylim = c(-50, 100))
+
+mqm_col_sha_aco <- mqmautocofactors(aug_col_sha, 50)
+mqm_col_sha_auto <- mqmscan(aug_col_sha, mqm_col_sha_aco, pheno.col = 3, 
+                            multicore = 4)
+mqm_col_sha_sco <- mqmsetcofactors(aug_col_sha, 5)
+mqm_col_sha_back <- mqmscan(aug_col_sha, mqm_col_sha_sco, pheno.col = 3, 
+                            multicore = 4)
+par(mfrow = c(2, 1))
+plot(mqm_col_sha_auto, mqm_col_sha_back)
+
