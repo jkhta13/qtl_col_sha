@@ -354,41 +354,80 @@ bd_col_sha_fq2 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_qtl_col_sha_rq,
                          method = "imp", formula = y ~ Q1 * Q2 + Q2 * Q3)
 summary(bd_col_sha_fq2)
 
+#Checking for additional QTLs
 bd_col_sha_aq <- addqtl(col_sha, qtl = bd_qtl_col_sha_rq, pheno.col = 5, 
                         method = "imp", formula = y ~ Q1 * Q2 + Q2 * Q3)
+
+#Seems like there are additional QTLs on Chr 1, 4, and 5
 summary(bd_col_sha_aq)
 
+#Making another model with additional 3 QTLs
 bd_col_sha_qtl1 <- makeqtl(col_sha, chr = c(1, 1, 3, 4, 5, 5), 
                            pos = c(39.7, 76.2, 4, 4, 13, 70))
 plot(bd_col_sha_qtl1)
+
+#Seems like all the QTLs and the interactions seem significant
 bd_col_sha_fq3 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_col_sha_qtl1, 
                          method = "imp", 
                          formula = y ~ Q1 * Q4 + Q2 + Q3 + Q4 * Q5 + Q6)
 summary(bd_col_sha_fq3)
 
+#Refining the QTL locations of our new model
 bd_col_sha_rq1 <- refineqtl(col_sha, qtl = bd_col_sha_qtl1, pheno.col = 5,
                             method = "imp", 
                             formula = y ~ Q1 * Q4 + Q2 + Q3 + Q4 * Q5 + Q6)
-
 plot(bd_col_sha_rq1)
 
+#Checking for interactions in our 6 QTL model; interactions between Chr 1 and 3,
+#Chr 1 and 5, Chr 4 with Chr 1, and Chr 4 with Chr 5
 addint(col_sha, qtl = bd_col_sha_rq1, pheno.col = 5, method = "imp",
        formula = y ~ Q1 * Q4 + Q2 + Q3 + Q4 * Q5 + Q6)
 
+#Adding the interactions and checking for the fit of the model; everything is 
+#significant again
 bd_col_sha_fq4 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_col_sha_rq1, 
                          method = "imp", 
                          formula = y ~ Q1 * Q4 + Q2 + Q3 + Q4 * Q5 + 
                                        Q6 + Q2 * Q4 + Q6 * Q4)
 summary(bd_col_sha_fq4)
 
+#Refining our model
 bd_col_sha_rq2 <- refineqtl(col_sha, qtl = bd_col_sha_rq1, pheno.col = 5, 
                             method = "imp", 
                             formula = y ~ Q1 * Q4 + Q2 + Q3 + Q4 * Q5 + 
                                           Q6 + Q2 * Q4 + Q6 * Q4)
 plot(bd_col_sha_rq2)
 
+#Checking for additional QTLs; additional QTLs on Chr 1 and 5
 bd_col_sha_aq1 <- addqtl(col_sha, qtl = bd_col_sha_rq2, pheno.col = 5, 
                          method = "imp", 
                          formula = y ~ Q1 * Q4 + Q2 + Q3 + Q4 * Q5 + 
                                        Q6 + Q2 * Q4 + Q6 * Q4)
 summary(bd_col_sha_aq1)
+
+summary(bd_col_sha_rq2)
+
+bd_col_sha_qtl2 <- makeqtl(col_sha, chr = c(1, 1, 3, 4, 5, 5, 5),
+                           pos = c(39.7, 78, 17, 4, 10.6, 20.5, 70))
+par(mfrow = c(1, 2))
+plot(bd_col_sha_rq2)
+plot(bd_col_sha_qtl2)
+bd_col_sha_fq4 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_col_sha_qtl2, 
+                         method = "imp", 
+                         formula = y ~ Q1 * Q4 + Q2 + Q3 + Q4 * Q5 + Q6 + Q7 + 
+                         Q2 * Q4 + Q4 * Q7)
+summary(bd_col_sha_fq4)
+bd_col_sha_rq3 <- refineqtl(col_sha, pheno.col = 5, qtl = bd_col_sha_qtl2, 
+                            method = "imp", 
+                            formula = y ~ Q1 * Q4 + Q2 + Q3 + Q4 * Q5 + Q6 + 
+                                          Q7 + Q2 * Q4 + Q4 * Q7)
+plot(bd_col_sha_rq3)
+
+bd_col_sha_aq2 <- addqtl(col_sha, qtl = bd_col_sha_qtl2, pheno.col = 5, 
+                         method = "imp", 
+                         formula = y ~ Q1 * Q4 + Q2 + Q3 + Q4 * Q5 + Q6 + 
+                                   Q7 + Q2 * Q4 + Q4 * Q7)
+summary(bd_col_sha_aq2)
+addint(col_sha, qtl = bd_col_sha_qtl2, pheno.col = 5, method = "imp",
+       formula = y ~ Q1 * Q4 + Q2 + Q3 + Q4 * Q5 + Q6 + Q7 + Q2 * Q4 + Q4 * Q7)
+
