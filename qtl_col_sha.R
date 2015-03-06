@@ -308,32 +308,48 @@ mqmplot.permutations(mqm.perm, legend = FALSE)
 
 
 #Building a QTL model for bolt days---------------------------------------------
+
+#Starting out with an imputation model
 out.impbd <- scanone(col_sha, method = "imp", pheno.col = 5, n.cluster = 4)
 perm.impbd <- scanone(col_sha, method = "imp", pheno.col = 5, n.perm = 2000, 
                       verbose = TRUE, n.cluster = 4)
 summary(perm.impbd)
 permbd <- summary(perm.impbd)[1]
+
+#Seems like there are QTLs on Chr 1, 4, and 5 (possibly 2 on Chr 5)
 plot(out.impbd, ylab = "LOD score")
 abline(h = permbd, lty = 2)
+
+#Again this verifies the location of QTLs on Chr 1, 4, and 5
 summary(out.impbd, perms = perm.impbd, alpha = 0.05)
 
+#Building a QTL model using the significant QTL's from out single-QTL analysis
 bd_col_sha_qtl <- makeqtl(col_sha, chr = c(1, 4, 5), pos = c(66.02, 6.34, 12))
 plot(bd_col_sha_qtl)
+
+#Fitting our QTL model; all putative QTLs are significant
 bd_col_sha_fq <- fitqtl(col_sha, pheno.col = 5, qtl = bd_col_sha_qtl, 
                         method = "imp", formula = y ~ Q1 + Q2 + Q3)
 summary(bd_col_sha_fq)
 
-bd_qtl_col_sha_rq <- refineqtl(col_sha, qtl = bd_col_sha_qtl, pheno.col = 5,
+bd_col_sha_rq <- refineqtl(col_sha, qtl = bd_col_sha_qtl, pheno.col = 5,
                                 method = "imp", formula = y ~ Q1 + Q2 + Q3)
-summary(bd_qtl_col_sha_rq)
+
+#QTL 1 moved a bit
+plot(bd_col_sha_qtl)
+plot(bd_col_sha_rq)
 
 bd_col_sha_fq1 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_qtl_col_sha_rq, 
                         method = "imp", formula = y ~ Q1 + Q2 + Q3)
 summary(bd_col_sha_fq1)
 
+#Checking for interactions between QTLs in our model; seems like QTL1 (Chr 1) 
+#and QTL2 (Chr 4) interact, as well as QTL2 (Chr 4) with QTL3 (Chr 5)
 addint(col_sha, qtl = bd_qtl_col_sha_rq, pheno.col = 5, method = "imp",
        formula = y ~ Q1 + Q2 + Q3)
 
+#Adding interactions to our model, all QTLs and their interactions are 
+#significant
 bd_col_sha_fq2 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_qtl_col_sha_rq, 
                          method = "imp", formula = y ~ Q1 * Q2 + Q2 * Q3)
 summary(bd_col_sha_fq2)
