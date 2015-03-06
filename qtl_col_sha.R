@@ -61,7 +61,7 @@ out.imph2 <- scanone(col_sha, method = "imp", pheno.col = 3, n.cluster = 4)
 
 #Permutes the data to derive LOD scores; this is done by "freezing" the 
 #genotypes and randomly assigning phenotypes. Threshold for background noise.
-perm.imph2 <- scanone(col_sha, method = "imp", pheno.col = 3, n.perm = 5000, 
+perm.imph2 <- scanone(col_sha, method = "imp", pheno.col = 3, n.perm = 2000, 
                       verbose = TRUE, n.cluster = 4)
 
 #Assign the 5% significance threshold so that we can visually inspect the LOD 
@@ -179,7 +179,7 @@ qtl_col_sha_2D_aq <- addqtl(col_sha, qtl = qtl_col_sha_2D_ref, pheno.col = 3,
                             method = "imp", 
                             formula = y ~ Q1 + Q2 * Q3 + Q4)
 
-#Potentially additional putative QTLs on Chr 2 and 4; their LOD > 2
+#Additional putative QTLs on Chr 2 and 4; their LOD > 2
 max(qtl_col_sha_2D_aq)
 plot(qtl_col_sha_2D_aq, ylab = "LOD Score")
 summary(qtl_col_sha_2D_aq)
@@ -250,7 +250,7 @@ qtl_col_sha_2D_ap <- addpair(col_sha, qtl = qtl_col_sha_2D_ref2, pheno.col = 3,
                              method =  "imp",  
                              formula = y ~ Q1 + Q2 + Q3 * Q5 + Q4 + Q6)
 
-#MQM Code-----------------------------------------------------------------------
+#MQM model on Height 2----------------------------------------------------------
 
 #Augments the data (basically imputes the data), by adding additional invidiuals
 aug_col_sha <- mqmaugment(col_sha, minprob =  0.925, verbose = TRUE)
@@ -408,6 +408,7 @@ summary(bd_col_sha_aq1)
 
 summary(bd_col_sha_rq2)
 
+#Additional putative QTLs
 bd_col_sha_qtl2 <- makeqtl(col_sha, chr = c(1, 1, 3, 4, 5, 5),
                            pos = c(39.7, 78, 17, 4, 10.6, 70))
 par(mfrow = c(1, 2))
@@ -438,3 +439,148 @@ bd_col_sha_fq5 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_col_sha_qtl2,
                          formula = y ~ Q1 * Q3 + Q1 * Q4 + Q1 * Q6 + Q2 + Q3 + 
                                    Q4 * Q5 + Q6 + Q2 * Q4 + Q4 * Q6)
 summary(bd_col_sha_fq5)
+
+#Building our QTL model based on a 2D scan
+scantwo_bd_col_sha <- scantwo(col_sha, pheno.col = 5, method = "imp", 
+                              verbose = TRUE, n.cluster = 12)
+
+scantwo_bd_col_sha_perm <- scantwo(col_sha, pheno.col = 5, method = "imp",
+                                   n.perm = 5000, n.cluster = 12)
+
+#MQM model of bolt days QTL--------------------------------------------------
+aug_col_sha <- mqmaugment(col_sha, minprob =  0.925, verbose = TRUE)
+geno.image(aug_col_sha)
+
+#Comparison of single-QTL analysis scan (on original data) and mqmscan on 
+#augmented data
+one_bd_mqm_col_sha <- scanone(col_sha, pheno.col = 5, method = "imp")
+scan_bd_mqm_col_sha <- mqmscan(aug_col_sha, pheno.col = 5, n.clusters = 4)
+plot(one_bd_mqm_col_sha, scan_bd_mqm_col_sha, col = c("red", "blue"), lty = 1:2)
+abline(h = perm95)
+summary(scan_bd_mqm_col_sha)
+
+#Finding markers that have significant LOD scores in the mqmscan, and then 
+#setting them as cofactors to find additional QTLs
+markers_bd_mqm <- find.marker(aug_col_sha, chr = c(1, 4, 5), pos = c(65, 5, 10))
+mqm_bd_mts <- find.markerindex(aug_col_sha, name = markers_bd_mqm)
+mqm_bd_cofactors <- mqmsetcofactors(aug_col_sha, cofactors = mqm_bd_mts)
+co1_bd_mqm_col_sha <- mqmscan(aug_col_sha, cofactors = mqm_bd_cofactors, 
+                              pheno.col = 5, n.cluster = 4)
+plot(co1_bd_mqm_col_sha)
+summary(co1_bd_mqm_col_sha)
+
+#Doing backwards method of finding QTLs-----------------------------------------
+
+#Setting automatic cofactors (50 of them)
+auto_bd_col_sha <- mqmautocofactors(aug_col_sha, 50)
+auto_bd_mqm_col_sha <- mqmscan(aug_col_sha, auto_bd_col_sha, pheno.col = 5, 
+                               n.cluster = 4)
+
+#Setting every 5th marker as a cofactor and then analyzing for QTLs
+set_bd_col_sha <- mqmsetcofactors(aug_col_sha, 5)
+set_bd_mqm_col_sha <- mqmscan(aug_col_sha, set_bd_col_sha, pheno.col = 5, 
+                              n.cluster = 4)
+summary(auto_bd_mqm_col_sha)
+summary(set_bd_mqm_col_sha)
+summary(co1_bd_mqm_col_sha)
+
+par(mfrow = c(2, 1))
+plot(auto_bd_mqm_col_sha, set_bd_mqm_col_sha, co1_bd_mqm_col_sha, 
+     col = c("blue", "green", "red"), lty = 1:3)
+
+#Checking putative QTL locations in mqm backwards models and forward selection 
+#QTL model
+par(mfrow = c(2, 2))
+plot(mqmgetmodel(auto_bd_mqm_col_sha))
+plot(mqmgetmodel(set_bd_mqm_col_sha))
+plot(bd_col_sha_qtl2)
+summary(set_bd_mqm_col_sha)
+
+#It seems like choosing the starting qtl map is arbitrary because the methods
+#produce similar maps; using setcofactors seem to add extraneous QTLs
+bd_mqm_col_sha_qtl <- makeqtl(col_sha, chr = c(1, 2, 3, 4, 5), 
+                              pos = c(75, 5, 15, 5, 10))
+plot(bd_mqm_col_sha_qtl)
+bd_mqm_col_sha_fq <- fitqtl(col_sha, pheno.col = 5, qtl = bd_mqm_col_sha_qtl, 
+                            method = "imp", 
+                            formula = y ~ Q1 + Q2 + Q3 + Q4 + Q5)
+summary(bd_mqm_col_sha_fq)
+addint(col_sha, pheno.col = 5, qtl = bd_mqm_col_sha_qtl, 
+       method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4 + Q5)
+bd_mqm_col_sha_fq1 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_mqm_col_sha_qtl,
+                             method = "imp", 
+                             formula = y ~ Q1 + Q2 * Q3 + Q4 * Q5)
+summary(bd_mqm_col_sha_fq1)
+bd_mqm_col_sha_rq <- refineqtl(col_sha, pheno.col = 5, qtl = bd_mqm_col_sha_qtl,
+                               method = "imp",
+                               formula = y ~ Q1 + Q2 * Q3 + Q4 * Q5)
+plot(bd_mqm_col_sha_rq)
+bd_mqm_col_sha_fq2 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_mqm_col_sha_rq,
+                             method = "imp",
+                             formula = y ~ Q1 + Q2 * Q3 + Q4 * Q5)
+summary(bd_mqm_col_sha_fq2)
+
+bd_mqm_col_sha_aq <- addqtl(col_sha, pheno.col = 5, qtl = bd_mqm_col_sha_rq, 
+                            method = "imp", 
+                            formula = y ~ Q1 + Q2 * Q3 + Q4 * Q5)
+summary(bd_mqm_col_sha_aq)
+plot(bd_mqm_col_sha_aq)
+
+par(mfrow = c(1, 2))
+plot(bd_col_sha_qtl2)
+summary(bd_col_sha_qtl2)
+summary(bd_mqm_col_sha_rq)
+plot(bd_mqm_col_sha_rq)
+
+#Adding QTL on Chr 2 on model made from single-QTL analysis
+bd_mqm_col_sha_qtl2 <- makeqtl(col_sha, chr = c(1, 1, 2, 3, 4, 5, 5), 
+                               pos = c(39.7, 78, 3.9, 17, 4, 10.6, 70))
+plot(bd_mqm_col_sha_qtl2)
+bd_mqm_col_sha_fq3 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_mqm_col_sha_qtl2, 
+                             method = "imp", 
+                             formula = y ~ Q1 * Q4 + Q1 * Q5 + Q1 * Q7 + Q2 * 
+                                       Q5 + Q3 * Q4 + Q5 * Q6 + Q5 * Q7)
+
+#When I added the QTL on Chr 2 (with no interaction with Chr 3), there was no 
+#significance, but when I added the interaction, the QTL/interaction are 
+#significant
+summary(bd_mqm_col_sha_fq3)
+
+#Refining the locations of putative QTLs in our new model
+bd_mqm_col_sha_rq2 <- refineqtl(col_sha, pheno.col = 5, qtl = bd_mqm_col_sha_qtl2, 
+                                method = "imp", 
+                                formula = y ~ Q1 * Q4 + Q1 * Q5 + Q1 * Q7 + Q2 * 
+                                Q5 + Q3 * Q4 + Q5 * Q6 + Q5 * Q7)
+
+#Checking out new model; everything seems significant
+bd_mqm_col_sha_fq4 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_mqm_col_sha_rq2, 
+                             method = "imp", 
+                             formula = y ~ Q1 * Q4 + Q1 * Q5 + Q1 * Q7 + Q2 * 
+                             Q5 + Q3 * Q4 + Q5 * Q6 + Q5 * Q7)
+
+#Checking for additional interactions between our QTLs; nothing seems 
+#significant
+addint(col_sha, pheno.col = 5, qtl = bd_mqm_col_sha_rq2, method = "imp",
+       formula = y ~ Q1 * Q4 + Q1 * Q5 + Q1 * Q7 + Q2 * 
+                 Q5 + Q3 * Q4 + Q5 * Q6 + Q5 * Q7)
+
+#Checking for additional QTLs, again nothing seems significant
+bd_mqm_col_sha_aq2 <- addqtl(col_sha, pheno.col = 5, qtl = bd_mqm_col_sha_rq2, method = "imp",
+                             formula = y ~ Q1 * Q4 + Q1 * Q5 + Q1 * Q7 + Q2 * 
+                                       Q5 + Q3 * Q4 + Q5 * Q6 + Q5 * Q7)
+
+
+plot(bd_mqm_col_sha_rq2)
+summary(bd_mqm_col_sha_rq2)
+summary(bd_mqm_col_sha_aq2)
+summary(bd_mqm_col_sha_fq4)
+summary(bd_col_sha_fq5)
+
+#Setting permutations to find QTL significance thresholds
+mqm.perm <- mqmpermutation(aug_col_sha, scanfunction = mqmscan, 
+                           cofactors = set_col_sha, pheno.col = 3, 
+                           batchsize = 25, n.perm = 10)
+mqm.perm.process <- mqmprocesspermutation(mqm.perm)
+summary(mqm.perm.process)
+mqmplot.permutations(mqm.perm, legend = FALSE)
+
