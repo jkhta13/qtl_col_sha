@@ -554,9 +554,18 @@ effectplot(col_sha, mname1 = bd_Q2_Q3[1], mname2 = bd_Q2_Q3[2], pheno.col = 5,
            add.legend = FALSE)
 
 #Height 1 QTL analysis----------------------------------------------------------
-col_sha <- sim.geno(col_sha, n.draws = 128, step = 0.1, error.prob = 0.001)
-col_sha <- calc.genoprob(col_sha, step = 0.1, error.prob = 0.001)
+
+#Doesn't seem like there are any significant QTLs for height 1, which is 
+#interesting
 h1_out_imp <- scanone(col_sha, pheno.col = 2, method = "imp")
 h1_out_perm <- scanone(col_sha, pheno.col = 2, method = "imp", n.perm = 2000, 
                        n.cluster = 4)
-h1_s2_col_sha
+summary(h1_out_perm)
+h1_perm95 <- summary(h1_out_perm)[1]
+
+plot(h1_out_imp, ylab = "LOD Score", ylim = c(0, 2))
+abline(h = h1_perm95, lty = 2)
+h1_s2_col_sha <- scantwo(col_sha, pheno.col = 2, method = "imp", 
+                         verbose = TRUE, n.cluster = 12)
+h1_s2_col_sha_perm <- scantwo(col_sha, pheno.col = 2, method = "imp", 
+                              n.perm = 5000, n.cluster = 12)
