@@ -640,16 +640,16 @@ summary(h2h3_col_sha_fq2)
 h1h3_out_imp <- scanone(col_sha, pheno.col = 8, method = "imp", n.cluster = 4)
 h1h3_perm_imp <- scanone(col_sha, pheno.col = 8, method = "imp", n.perm = 5000,
                          n.cluster = 4)
-
 h1h3_perm95 <- summary(h1h3_perm_imp)[1]
 
+#QTLs on Chr 1, 2, 4, and 5
 plot(h1h3_out_imp, ylab = "LOD Score")
 abline(h = h1h3_perm95, lty = 2)
-
 summary(h1h3_out_imp, perms = h1h3_perm_imp, alpha = 0.05)
 
+#QTL model based on putative QTLs; everything significant
 h1h3_col_sha_qtl <- makeqtl(col_sha, chr = c(1, 2, 4, 5), 
-                            pos = c(30.4, 39, 76.3, 12))
+                            pos = c(30.4, 39, 76.3, 13))
 
 h1h3_col_sha_fq <- fitqtl(col_sha, pheno.col = 8, qtl = h1h3_col_sha_qtl, 
                           method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4)
@@ -660,6 +660,7 @@ summary(h1h3_col_sha_fq)
 addint(col_sha, pheno.col = 8, qtl = h1h3_col_sha_qtl, method = "imp",
        formula = y ~ Q1 + Q2 + Q3 + Q4)
 
+#Refining our QTL model
 h1h3_col_sha_rq <- refineqtl(col_sha, pheno.col = 8, qtl = h1h3_col_sha_qtl, 
                              method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4)
 
@@ -668,11 +669,13 @@ h1h3_col_sha_fq1 <- fitqtl(col_sha, pheno.col = 8, qtl = h1h3_col_sha_rq,
 
 summary(h1h3_col_sha_fq1)
 
+#Checking for additional QTLs; possibly another on Chr 5
 h1h3_col_sha_aq <- addqtl(col_sha, pheno.col = 8, qtl = h1h3_col_sha_rq,
                           method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4)
 
 summary(h1h3_col_sha_aq)
 
+#Checking the fit of the additional QTL on Chr 5; everything significant
 h1h3_col_sha_qtl1 <- makeqtl(col_sha, chr = c(1, 2, 4, 5, 5), 
                              pos = c(29, 41.7, 72.5, 13, 49))
 
@@ -688,9 +691,24 @@ addint(col_sha, pheno.col = 8, qtl = h1h3_col_sha_qtl1, method = "imp",
 h1h3_col_sha_rq1 <- refineqtl(col_sha, pheno.col = 8, qtl = h1h3_col_sha_qtl1,
                               method = "imp", formula = y ~ Q1 + Q2 + Q3 +
                                                             Q4 + Q5)
+h1h3_col_sha_fq3 <- fitqtl(col_sha, pheno.col = 8, qtl = h1h3_col_sha_rq1,
+                           method = "imp", formula = y ~ Q1 + Q2 + Q3 +
+                                                         Q4 + Q5)
 
+summary(h1h3_col_sha_fq3)
+
+#No additional QTLs
 h1h3_col_sha_aq1 <- addqtl(col_sha, pheno.col = 8, qtl = h1h3_col_sha_qtl1,
                            method = "imp", formula = y ~ Q1 + Q2 + Q3 +
                                                          Q4 + Q5)
 
 summary(h1h3_col_sha_aq1)
+
+#Genetic maps of all QTL models for all phenotypes
+par(mfrow = c(2, 3))
+plot(h2_s2_col_sha_rq, main = "Height 2 QTL Map")
+plot(h3_col_sha_rq, main = "Height 3 QTL Map")
+plot(bd_s2_col_sha_rq, main = "Bolt Days QTL Map")
+plot(h1h2_col_sha_rq, main = "Height 2 - Height 1 QTL Map")
+plot(h2h3_col_sha_rq, main = "Height 3 - Height 2 QTL Map")
+plot(h1h3_col_sha_rq1, main = "Height 3 - Height 1 QTL Map")
