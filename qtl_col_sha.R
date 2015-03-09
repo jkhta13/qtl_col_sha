@@ -40,12 +40,10 @@ top.errorlod(col_sha, cutoff = 3)
 col_sha <- sim.geno(col_sha, n.draws = 64, step = 1, error.prob = 0.001)
 col_sha <- calc.genoprob(col_sha, step = 1, error.prob = 0.001)
 
-h2_out_imp <- scanone(col_sha, method = "imp", pheno.col = 3)
-
 #Permutes the data to derive LOD scores; this is done by "freezing" the 
 #genotypes and randomly assigning phenotypes. Threshold for background noise.
 h2_out_imp <- scanone(col_sha, method = "imp", pheno.col = 3)
-h2_perm_imp <- scanone(col_sha, method = "imp", pheno.col = 3, n.perm = 2000, 
+h2_perm_imp <- scanone(col_sha, method = "imp", pheno.col = 3, n.perm = 5000, 
                        verbose = TRUE, n.cluster = 4)
 
 #Assign the 5% significance threshold so that we can visually inspect the LOD 
@@ -92,12 +90,12 @@ summary(h2_col_sha_fq)
 addint(col_sha, qtl = h2_col_sha_qtl1, method = "imp", 
        pheno.col = 3)
 
-#2D scan for QTLs; pairwise comparison for each interval location between 
-#chromosomes
+#QTL model based on 2D scan on Height 2-----------------------------------------
+
 h2_s2_col_sha <- scantwo(col_sha, pheno.col = 3, method = "imp", 
                          verbose = TRUE, n.cluster = 4)
 h2_s2_col_sha_perm <- scantwo(col_sha, pheno.col = 3, method = "imp", 
-                              n.perm = 1000, n.cluster = 8)
+                              n.perm = 5000, n.cluster = 8)
 
 #Generates thresholds for our 2D scan
 summary(h2_s2_col_sha_perm)
@@ -404,7 +402,7 @@ co1_bd_mqm_col_sha <- mqmscan(aug_col_sha, cofactors = mqm_bd_cofactors,
 plot(co1_bd_mqm_col_sha)
 summary(co1_bd_mqm_col_sha)
 
-#Doing backwards method of finding QTLs-----------------------------------------
+#Bolt days backwards method of finding QTLs-------------------------------------
 
 #Setting automatic cofactors (50 of them)
 auto_bd_col_sha <- mqmautocofactors(aug_col_sha, 50)
@@ -515,10 +513,12 @@ summary(bd_mqm_col_sha_fq4)
 summary(bd_col_sha_fq5)
 
 #Building a QTL model based on 2D scan of bolt days-----------------------------
-scantwo_bd_col_sha <- scantwo(col_sha, pheno.col = 5, method = "imp")
-scantwo_bd_col_sha_perm <- scantwo(col_sha, pheno.col = 5, method = "imp",
-                                   n.perm = 5000)
-summary(scantwo_bd_col_sha_perm)
+
+bd_s2_col_sha <- scantwo(col_sha, pheno.col = 5, method = "imp")
+b2_s2_col_sha_perm <- scantwo(col_sha, pheno.col = 5, method = "imp",
+                              n.perm = 5000)
+
+summary(bd_s2_col_sha_perm)
 
 #Seems like there are only significant QTLs on Chr 4 and 5
 summary(scantwo_bd_col_sha, perms = scantwo_bd_col_sha_perm, 
@@ -730,3 +730,57 @@ summary(h2h3_col_sha_fq2)
 h1h3_out_imp <- scanone(col_sha, pheno.col = 8, method = "imp", n.cluster = 4)
 h1h3_perm_imp <- scanone(col_sha, pheno.col = 8, method = "imp", n.perm = 5000,
                          n.cluster = 4)
+
+h1h3_perm95 <- summary(h1h3_perm_imp)[1]
+
+plot(h1h3_out_imp, ylab = "LOD Score")
+abline(h = h1h3_perm95, lty = 2)
+
+summary(h1h3_out_imp, perms = h1h3_perm_imp, alpha = 0.05)
+
+h1h3_col_sha_qtl <- makeqtl(col_sha, chr = c(1, 2, 4, 5), 
+                            pos = c(30.4, 39, 76.3, 12))
+
+h1h3_col_sha_fq <- fitqtl(col_sha, pheno.col = 8, qtl = h1h3_col_sha_qtl, 
+                          method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4)
+
+summary(h1h3_col_sha_fq)
+
+#No interactions
+addint(col_sha, pheno.col = 8, qtl = h1h3_col_sha_qtl, method = "imp",
+       formula = y ~ Q1 + Q2 + Q3 + Q4)
+
+h1h3_col_sha_rq <- refineqtl(col_sha, pheno.col = 8, qtl = h1h3_col_sha_qtl, 
+                             method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4)
+
+h1h3_col_sha_fq1 <- fitqtl(col_sha, pheno.col = 8, qtl = h1h3_col_sha_rq,
+                           method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4)
+
+summary(h1h3_col_sha_fq1)
+
+h1h3_col_sha_aq <- addqtl(col_sha, pheno.col = 8, qtl = h1h3_col_sha_rq,
+                          method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4)
+
+summary(h1h3_col_sha_aq)
+
+h1h3_col_sha_qtl1 <- makeqtl(col_sha, chr = c(1, 2, 4, 5, 5), 
+                             pos = c(29, 41.7, 72.5, 13, 49))
+
+h1h3_col_sha_fq2 <- fitqtl(col_sha, pheno.col = 8, qtl = h1h3_col_sha_qtl1,
+                           method = "imp", formula = y ~ Q1 + Q2 + Q3 + 
+                                                         Q4 + Q5)
+summary(h1h3_col_sha_fq2)
+
+#No interactions
+addint(col_sha, pheno.col = 8, qtl = h1h3_col_sha_qtl1, method = "imp",
+       formula = y ~ Q1 + Q2 + Q3 + Q4 + Q5)
+
+h1h3_col_sha_rq1 <- refineqtl(col_sha, pheno.col = 8, qtl = h1h3_col_sha_qtl1,
+                              method = "imp", formula = y ~ Q1 + Q2 + Q3 +
+                                                            Q4 + Q5)
+
+h1h3_col_sha_aq1 <- addqtl(col_sha, pheno.col = 8, qtl = h1h3_col_sha_qtl1,
+                           method = "imp", formula = y ~ Q1 + Q2 + Q3 +
+                                                         Q4 + Q5)
+
+summary(h1h3_col_sha_aq1)
