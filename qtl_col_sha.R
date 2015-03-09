@@ -556,7 +556,9 @@ effectplot(col_sha, mname1 = bd_Q2_Q3[1], mname2 = bd_Q2_Q3[2], pheno.col = 5,
 #Height 1 QTL analysis----------------------------------------------------------
 
 #Doesn't seem like there are any significant QTLs for height 1, which is 
-#interesting
+#interesting; but that might be because we start measuring flowering time only 
+#only when they start bolting (so all the individuals are ~ 1 mm)
+
 h1_out_imp <- scanone(col_sha, pheno.col = 2, method = "imp")
 h1_out_perm <- scanone(col_sha, pheno.col = 2, method = "imp", n.perm = 2000, 
                        n.cluster = 4)
@@ -565,10 +567,13 @@ h1_perm95 <- summary(h1_out_perm)[1]
 
 plot(h1_out_imp, ylab = "LOD Score", ylim = c(0, 2))
 abline(h = h1_perm95, lty = 2)
+
+#QTL analysis based on 2D scan of Height 1--------------------------------------
 h1_s2_col_sha <- scantwo(col_sha, pheno.col = 2, method = "imp", 
                          verbose = TRUE, n.cluster = 12)
 h1_s2_col_sha_perm <- scantwo(col_sha, pheno.col = 2, method = "imp", 
                               n.perm = 5000, n.cluster = 12)
+
 
 #QTL mapping of Height 3--------------------------------------------------------
 
@@ -603,4 +608,125 @@ summary(h3_col_sha_fq1)
 #Checking for additional QTLs
 h3_col_sha_aq <- addqtl(col_sha, pheno.col = 4, qtl = h3_col_sha_qtl, 
                         method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4)
+
+#Seems like there's another QTL on Chr 5
 summary(h3_col_sha_aq)
+
+#Make another QTL model with additional QTL on Chr 5 and checking the fit
+h3_col_sha_qtl1 <- makeqtl(col_sha, chr = c(1, 2, 4, 5, 5), 
+                           pos = c(30.4, 39, 76.3, 12, 49))
+
+h3_col_sha_fq2 <- fitqtl(col_sha, pheno.col = 4, qtl = h3_col_sha_qtl1, 
+                        method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4 + Q5) 
+
+#All QTLs seem significant
+summary(h3_col_sha_fq2)
+
+#Doesn't seem like there's any interactions
+addint(col_sha, pheno.col = 4, qtl = h3_col_sha_qtl1, method = "imp",
+       formula = y ~ Q1 + Q2 + Q3 + Q4 + Q5)
+
+h3_col_sha_rq <- refineqtl(col_sha, pheno.col = 4, qtl = h3_col_sha_qtl1, method = "imp",
+                           formula = y ~ Q1 + Q2 + Q3 + Q4 + Q5)
+
+h3_col_sha_fq3 <- fitqtl(col_sha, pheno.col = 4, qtl = h3_col_sha_rq, 
+                         method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4 + Q5)
+
+summary(h3_col_sha_fq3)
+
+
+#QTL analysis based on 2D scan of Height 3--------------------------------------
+
+h3_s2_col_sha <- scantwo(col_sha, pheno.col = 4, method = "imp", verbose = TRUE,
+                         n.cluster = 4)
+h3_s2_col_sha_perm <- scantwo(col_sha, pheno.col = 4, method = "imp", 
+                              n.perm = 5000, n.cluster = 4)
+
+#QTL analysis on Height 2 - Height 1--------------------------------------------
+h1h2_out_imp <- scanone(col_sha, pheno.col = 6, method = "imp")
+h1h2_perm_imp <- scanone(col_sha, pheno.col = 6, method = "imp", n.perm = 5000,
+                         n.cluster = 4)
+h1h2_perm95 <- summary(h1h2_perm_imp)[1]
+
+plot(h1h2_out_imp, ylab = "LOD Score")
+abline(h = h1h2_perm95, lty = 2)
+
+summary(h1h2_out_imp, perms = h1h2_perm_imp, alpha = 0.05)
+
+h1h2_col_sha_qtl <- makeqtl(col_sha, chr = c(1, 5), pos = c(39.7, 12))
+h1h2_col_sha_fq <- fitqtl(col_sha, pheno.col = 6, qtl = h1h2_col_sha_qtl,
+                          method = "imp", formula = y ~ Q1 + Q2)
+
+summary(h1h2_col_sha_fq)
+
+addint(col_sha, pheno.col = 6, qtl = h1h2_col_sha_qtl, method = "imp",
+       formula = y ~ Q1 + Q2)
+
+h1h2_col_sha_aq <- addqtl(col_sha, qtl = h1h2_col_sha_qtl, pheno.col = 6, 
+                          method = "imp", formula = y ~ Q1 + Q2)
+summary(h1h2_col_sha_aq)
+
+h1h2_col_sha_qtl1 <- makeqtl(col_sha, chr = c (1, 4, 5, 5), 
+                             pos = c(39.7, 62, 12, 79.6))
+
+h1h2_col_sha_fq1 <- fitqtl(col_sha, pheno.col = 6, qtl = h1h2_col_sha_qtl1,
+                           method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4)
+summary(h1h2_col_sha_fq1)
+addint(col_sha, pheno.col = 6, qtl = h1h2_col_sha_qtl1, method = "imp",
+       formula = y ~ Q1 + Q2 + Q3 + Q4)
+
+h1h2_col_sha_rq <- refineqtl(col_sha, pheno.col = 6, qtl = h1h2_col_sha_qtl1,
+                             method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4)
+
+h1h2_col_sha_aq1 <- addqtl(col_sha, pheno.col = 6, qtl = h1h2_col_sha_rq,
+                           method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4)
+summary(h1h2_col_sha_aq1)
+
+#2D scan based on QTL analysis of Height 2 - Height 1---------------------------
+
+#QTL model based on single-QTL analysis of Height 3 - Height 2------------------
+
+h2h3_out_imp <- scanone(col_sha, pheno.col = 7, method = "imp", n.cluster = 4)
+h2h3_perm_imp <- scanone(col_sha, pheno.col = 7, method = "imp", n.perm = 5000,
+                         n.cluster = 4)
+
+h2h3_perm95 <- summary(h2h3_perm_imp)[1]
+
+plot(h2h3_out_imp, ylab = "LOD Score")
+abline(h = h2h3_perm95, lty = 2)
+
+summary(h2h3_out_imp, perms = h2h3_perm_imp, alpha = 0.05)
+
+h2h3_col_sha_qtl <- makeqtl(col_sha, chr = c(1, 2, 4, 5), 
+                            pos = c(30.4, 40.8, 72, 26.7))
+h2h3_col_sha_fq <- fitqtl(col_sha, pheno.col = 7, qtl = h2h3_col_sha_qtl,
+                          method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4)
+summary(h2h3_col_sha_fq)
+
+addint(col_sha, pheno.col = 7, qtl = h2h3_col_sha_qtl, method = "imp",
+       formula = y ~ Q1 + Q2 + Q3 + Q4)
+
+h2h3_col_sha_fq1 <- fitqtl(col_sha, pheno.col = 7, qtl = h2h3_col_sha_qtl,
+                           method = "imp", formula = y ~ Q1 * Q2 + Q3 + Q4)
+
+summary(h2h3_col_sha_fq1)
+
+h2h3_col_sha_aq <- addqtl(col_sha, pheno.col = 7, qtl = h2h3_col_sha_qtl,
+                          method = "imp", formula = y ~ Q1 * Q2 + Q3 + Q4)
+summary(h2h3_col_sha_aq)
+
+h2h3_col_sha_rq <- refineqtl(col_sha, pheno.col = 7, qtl = h2h3_col_sha_qtl,
+                             method = "imp", formula = y ~ Q1 * Q2 + Q3 + Q4)
+
+h2h3_col_sha_fq2 <- fitqtl(col_sha, pheno.col = 7, qtl = h2h3_col_sha_rq,
+                           method = "imp", formula = y ~ Q1 * Q2 + Q3 + Q4)
+summary(h2h3_col_sha_fq2)
+
+
+#QTL model based on 2D scan of Height 3 - Height 2------------------------------
+
+
+#QTL model based on single-QTL analysis of Height 3 - Height 1------------------
+h1h3_out_imp <- scanone(col_sha, pheno.col = 8, method = "imp", n.cluster = 4)
+h1h3_perm_imp <- scanone(col_sha, pheno.col = 8, method = "imp", n.perm = 5000,
+                         n.cluster = 4)
