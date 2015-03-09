@@ -569,3 +569,38 @@ h1_s2_col_sha <- scantwo(col_sha, pheno.col = 2, method = "imp",
                          verbose = TRUE, n.cluster = 12)
 h1_s2_col_sha_perm <- scantwo(col_sha, pheno.col = 2, method = "imp", 
                               n.perm = 5000, n.cluster = 12)
+
+#QTL mapping of Height 3--------------------------------------------------------
+
+h3_out_imp <- scanone(col_sha, pheno.col = 4, method = "imp", n.cluster = 4)
+h3_perm_imp <- scanone(col_sha, pheno.col = 4, method = "imp", n.perm = 5000, 
+                       n.cluster = 4)
+h3_perm95 <- summary(h3_perm_imp)[1]
+
+plot(h3_out_imp, ylab = "LOD Score")
+abline(h = h3_perm95, lty = 2)
+summary(h3_out_imp, perms = h3_perm_imp, alpha = 0.05)
+
+#QTL model for Height 3
+
+h3_col_sha_qtl <- makeqtl(col_sha, chr = c(1, 2, 4, 5), 
+                          pos = c(30.4, 39, 76.3, 12))
+h3_col_sha_fq <- fitqtl(col_sha, pheno.col = 4, qtl = h3_col_sha_qtl, 
+                        method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4)
+summary(h3_col_sha_fq)
+
+#Might be an interaction between QTL1 and QTL2
+addint(col_sha, pheno.col = 5, qtl = h3_col_sha_qtl, method = "imp", 
+       formula = y ~ Q1 + Q2 + Q3 + Q4)
+
+#Making another QTL fit to see if the interaction is significant
+h3_col_sha_fq1 <- fitqtl(col_sha, pheno.col = 4, qtl = h3_col_sha_qtl,
+                         method = "imp", formula = y ~ Q1 * Q2 + Q3 + Q4)
+
+#Interaction doesn't seem that significant
+summary(h3_col_sha_fq1)
+
+#Checking for additional QTLs
+h3_col_sha_aq <- addqtl(col_sha, pheno.col = 4, qtl = h3_col_sha_qtl, 
+                        method = "imp", formula = y ~ Q1 + Q2 + Q3 + Q4)
+summary(h3_col_sha_aq)
