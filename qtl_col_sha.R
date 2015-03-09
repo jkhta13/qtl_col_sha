@@ -64,14 +64,13 @@ h2_col_sha_qtl <- makeqtl(col_sha, chr = 5, pos = 12)
 summary(h2_col_sha_qtl)
 
 #Checking for other significant QTLs
-h2_col_sha_aq <- addqtl(col_sha, qtl = h2_col_sha_qtl, method = "imp", 
-                        pheno.col = 3)
+h2_col_sha_aq <- addqtl(col_sha, pheno.col = 3, qtl = h2_col_sha_qtl, 
+                        method = "imp")
 
 #Statistically checks for other QTLs based on our permutation data; additional
 #QTLs on Chr 1, 4 and another on 5
 summary(h2_col_sha_aq, perms = h2_perm_imp, alpha = 0.05, pvalues = TRUE)
 plot(h2_col_sha_aq, ylab = "LOD Score")
-
 
 #Adding additional QTLs to our model with other putative QTL positions
 h2_col_sha_qtl1 <- makeqtl(cross = col_sha, chr = c(1, 4, 5, 5), 
@@ -86,12 +85,14 @@ h2_col_sha_fq <- fitqtl(col_sha, qtl = h2_col_sha_qtl1, pheno.col = 3,
 
 summary(h2_col_sha_fq)
 
-#Checks for any interactions between QTLs in our 4 QTL model
+#Checks for any interactions between QTLs in our 4 QTL model; possible 
+#interaction between chromosome 4 and 5
 addint(col_sha, qtl = h2_col_sha_qtl1, method = "imp", 
        pheno.col = 3)
 
 #QTL model based on 2D scan on Height 2-----------------------------------------
 
+#2D scan for Height 2
 h2_s2_col_sha <- scantwo(col_sha, pheno.col = 3, method = "imp", 
                          verbose = TRUE, n.cluster = 4)
 h2_s2_col_sha_perm <- scantwo(col_sha, pheno.col = 3, method = "imp", 
@@ -102,7 +103,7 @@ summary(h2_s2_col_sha_perm)
 
 #Determines putative QTLs and their locations based on our thresholds
 summary(h2_s2_col_sha, perms = h2_s2_col_sha_perm, 
-        thresholds = c(5.54, 4.1, 3.45, 4.43, 2.48))
+        thresholds = c(5.59, 4.15, 3.54, 4.38, 2.42))
 summary(h2_col_sha_rq)
 
 #Confirms our QTL model based on our single-QTL analysis
@@ -123,11 +124,11 @@ effectplot(col_sha, mname1 = h2_Q2_Q3[1], mname2 = h2_Q2_Q3[2], pheno.col = 3,
 #Comparing putative QTLs between our single-QTL analysis and 2D scan
 summary(h2_out_imp, perms = h2_perm_imp, alpha = 0.05, pvalues = TRUE)
 summary(h2_s2_col_sha, perms = h2_s2_col_sha_perm, pvalues = TRUE, 
-        thresholds = c(5.54, 4.1, 3.45, 4.43, 2.48))
+        thresholds = c(5.59, 4.15, 3.54, 4.38, 2.42))
 
 #QTL model based on our 2D results
 h2_s2_col_sha_qtl <- makeqtl(col_sha, chr = c(1, 4, 5, 5), 
-                             pos = c(40, 81, 12, 80))
+                             pos = c(40, 81, 13, 80))
 plot(h2_s2_col_sha_qtl)
 h2_s2_col_sha_fq <- fitqtl(col_sha, qtl = h2_s2_col_sha_qtl, pheno.col = 3, 
                            formula = y ~ Q1 + Q2 * Q3 + Q4, method = "imp")
@@ -265,7 +266,7 @@ summary(bd_perm_imp)
 bd_perm_95 <- summary(bd_perm_imp)[1]
 
 #Seems like there are QTLs on Chr 1, 4, and 5 (possibly 2 on Chr 5)
-plot(bd_out_imp, ylab = "LOD score")
+plot(bd_out_imp, ylab = "LOD score", main = "Imputation Analysis on Bolt Days")
 abline(h = bd_perm_95, lty = 2)
 
 #Again this verifies the location of QTLs on Chr 1, 4, and 5
@@ -292,93 +293,20 @@ bd_col_sha_fq1 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_col_sha_rq,
                          method = "imp", formula = y ~ Q1 + Q2 + Q3)
 summary(bd_col_sha_fq1)
 
-#Checking for interactions between QTLs in our model; seems like QTL1 (Chr 1) 
-#and QTL2 (Chr 4) interact, as well as QTL2 (Chr 4) with QTL3 (Chr 5)
+#Checking for interactions between QTLs in our model; seems like QTL2 (Chr 4) 
+#interacts with QTL3 (Chr 5)
 addint(col_sha, qtl = bd_col_sha_rq, pheno.col = 5, method = "imp",
        formula = y ~ Q1 + Q2 + Q3)
 
 #Adding interactions to our model, all QTLs and their interactions are 
 #significant
 bd_col_sha_fq2 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_col_sha_rq, 
-                         method = "imp", formula = y ~ Q1 * Q2 + Q2 * Q3)
+                         method = "imp", formula = y ~ Q1 + Q2 + Q2 * Q3)
 summary(bd_col_sha_fq2)
 
-#Checking for additional QTLs
+#Checking for additional QTLs; none really significant
 bd_col_sha_aq <- addqtl(col_sha, qtl = bd_col_sha_rq, pheno.col = 5, 
-                        method = "imp", formula = y ~ Q1 * Q2 + Q2 * Q3)
-
-#Seems like there are additional QTLs on Chr 1 and 3
-summary(bd_col_sha_aq)
-
-#Making another model with additional QTLs
-bd_col_sha_qtl1 <- makeqtl(col_sha, chr = c(1, 1, 3, 4, 5), 
-                           pos = c(39.7, 59, 3.02, 4, 13))
-plot(bd_col_sha_qtl1)
-
-#Seems like all the QTLs and the interactions seem significant
-bd_col_sha_fq3 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_col_sha_qtl1, 
-                         method = "imp", 
-                         formula = y ~ Q1 * Q4 + Q2 + Q3 + Q4 * Q5)
-summary(bd_col_sha_fq3)
-
-#Refining the QTL locations of our new model
-bd_col_sha_rq1 <- refineqtl(col_sha, qtl = bd_col_sha_qtl1, pheno.col = 5,
-                            method = "imp", 
-                            formula = y ~ Q1 * Q4 + Q2 + Q3 + Q4 * Q5)
-plot(bd_col_sha_rq1)
-
-#Checking for interactions in our 6 QTL model; interactions Chr 1 and 5
-addint(col_sha, qtl = bd_col_sha_rq1, pheno.col = 5, method = "imp",
-       formula = y ~ Q1 * Q4 + Q2 + Q3 + Q4 * Q5)
-
-#Adding the interaction and checking for the fit of the model; everything is 
-#significant again
-bd_col_sha_fq4 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_col_sha_rq1, 
-                         method = "imp", 
-                         formula = y ~ Q1 * Q4 + Q1 * Q5 + Q2 + Q3 + Q4 * Q5)
-summary(bd_col_sha_fq4)
-
-#Refining our model
-bd_col_sha_rq2 <- refineqtl(col_sha, qtl = bd_col_sha_rq1, pheno.col = 5, 
-                            method = "imp", 
-                            formula = y ~ Q1 * Q4 + Q1 * Q5 + Q2 + Q3 + Q4 * Q5)
-plot(bd_col_sha_rq2)
-
-#Checking for additional QTLs
-bd_col_sha_aq1 <- addqtl(col_sha, qtl = bd_col_sha_rq2, pheno.col = 5, 
-                         method = "imp", 
-                         formula = y ~ Q1 * Q4 + Q1 * Q5 + Q2 + Q3 + Q4 * Q5)
-summary(bd_col_sha_aq1)
-
-summary(bd_col_sha_rq2)
-
-#Additional putative QTLs
-bd_col_sha_qtl2 <- makeqtl(col_sha, chr = c(1, 1, 3, 4, 5, 5),
-                           pos = c(39.7, 76.2, 3, 4, 11, 70.4))
-par(mfrow = c(1, 2))
-plot(bd_col_sha_rq2)
-plot(bd_col_sha_qtl2)
-
-bd_col_sha_fq4 <- fitqtl(col_sha, pheno.col = 5, qtl = bd_col_sha_qtl2, 
-                         method = "imp", 
-                         formula = y ~ Q1 * Q4 + Q1 * Q5 + 
-                                   Q2 + Q3 + Q4 * Q5 + Q6)
-summary(bd_col_sha_fq4)
-
-bd_col_sha_rq3 <- refineqtl(col_sha, pheno.col = 5, qtl = bd_col_sha_qtl2, 
-                            method = "imp", 
-                            formula = y ~ Q1 * Q4 + Q1 * Q5 + 
-                                      Q2 + Q3 + Q4 * Q5 + Q6)
-plot(bd_col_sha_rq3)
-
-bd_col_sha_aq2 <- addqtl(col_sha, qtl = bd_col_sha_qtl2, pheno.col = 5, 
-                         method = "imp", 
-                         formula = y ~ Q1 * Q4 + Q1 * Q5 + 
-                                   Q2 + Q3 + Q4 * Q5 + Q6)
-summary(bd_col_sha_aq2)
-addint(col_sha, qtl = bd_col_sha_qtl2, pheno.col = 5, method = "imp",
-       formula = y ~ Q1 * Q4 + Q1 * Q5 + Q2 + Q3 + Q4 * Q5 + Q6)
-plot(bd_col_sha_qtl2)
+                        method = "imp", formula = y ~ Q1 + Q2 + Q2 * Q3)
 
 #MQM model of bolt days QTL--------------------------------------------------
 aug_col_sha <- mqmaugment(col_sha, minprob =  0.925, verbose = TRUE)
