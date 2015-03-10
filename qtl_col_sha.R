@@ -467,6 +467,10 @@ h1_s2_col_sha <- scantwo(col_sha, pheno.col = 2, method = "imp",
 h1_s2_col_sha_perm <- scantwo(col_sha, pheno.col = 2, method = "imp", 
                               n.perm = 5000, n.cluster = 12)
 
+#There are no significant QTL 
+summary(h1_s2_col_sha_perm)
+summary(h1_s2_col_sha, thresholds = c(485, 484, 426, 242, 241))
+
 #QTL mapping of Height 3--------------------------------------------------------
 
 h3_out_imp <- scanone(col_sha, pheno.col = 4, method = "imp", n.cluster = 4)
@@ -533,6 +537,10 @@ h3_s2_col_sha <- scantwo(col_sha, pheno.col = 4, method = "imp", verbose = TRUE,
                          n.cluster = 4)
 h3_s2_col_sha_perm <- scantwo(col_sha, pheno.col = 4, method = "imp", 
                               n.perm = 5000, n.cluster = 4)
+
+#The 2D scan seems to correspond with our single-QTL model
+summary(h3_s2_col_sha_perm)
+summary(h3_s2_col_sha, thresholds = c(5.56, 4.14, 3.47, 4.33, 2.4))
 
 #QTL analysis on Height 2 - Height 1--------------------------------------------
 h1h2_out_imp <- scanone(col_sha, pheno.col = 6, method = "imp")
