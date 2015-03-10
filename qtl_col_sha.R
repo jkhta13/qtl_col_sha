@@ -206,8 +206,8 @@ geno.image(aug_col_sha)
 
 #Comparison of single-QTL analysis scan (on original data) and mqmscan on 
 #augmented data
-one_mqm_col_sha <- scanone(col_sha, pheno.col = 3, method = "imp")
-scan_mqm_col_sha <- mqmscan(aug_col_sha, pheno.col = 3, n.clusters = 4)
+one_h2_col_sha <- scanone(col_sha, pheno.col = 3, method = "imp")
+mqm_h2_col_sha <- mqmscan(aug_col_sha, pheno.col = 3, n.clusters = 4)
 plot(one_mqm_col_sha, scan_mqm_col_sha, col = c("red", "blue"), lty = 1:2)
 abline(h = h2_perm95, lty = 2)
 summary(scan_mqm_col_sha)
@@ -471,6 +471,27 @@ h1_s2_col_sha_perm <- scantwo(col_sha, pheno.col = 2, method = "imp",
 summary(h1_s2_col_sha_perm)
 summary(h1_s2_col_sha, thresholds = c(485, 484, 426, 242, 241))
 
+aug_col_sha <- mqmaugment(col_sha, minprob =  0.925, verbose = TRUE)
+geno.image(aug_col_sha)
+
+#MQM analysis Height 1----------------------------------------------------------
+
+#Setting automatic cofactors (50 of them)
+auto_col_sha <- mqmautocofactors(aug_col_sha, 50)
+auto_h1_mqm_col_sha <- mqmscan(aug_col_sha, auto_col_sha, pheno.col = 2, 
+                               n.cluster = 4)
+
+#Setting every 5th marker as a cofactor and then analyzing for QTLs
+set_col_sha <- mqmsetcofactors(aug_col_sha, 5)
+set_h1_mqm_col_sha <- mqmscan(aug_col_sha, set_col_sha, pheno.col = 2, 
+                              n.cluster = 4)
+summary(auto_h1_mqm_col_sha)
+summary(set_h1_mqm_col_sha)
+
+par(mfrow = c(2, 1))
+plot(auto_h1_mqm_col_sha, set_h1_mqm_col_sha, col = c("blue", "green"), 
+     lty = 1:2)
+
 #QTL mapping of Height 3--------------------------------------------------------
 
 h3_out_imp <- scanone(col_sha, pheno.col = 4, method = "imp", n.cluster = 4)
@@ -541,6 +562,22 @@ h3_s2_col_sha_perm <- scantwo(col_sha, pheno.col = 4, method = "imp",
 #The 2D scan seems to correspond with our single-QTL model
 summary(h3_s2_col_sha_perm)
 summary(h3_s2_col_sha, thresholds = c(5.56, 4.14, 3.47, 4.33, 2.4))
+
+#MQM analysis Height 3----------------------------------------------------------
+
+#Setting every 5th marker as a cofactor and then analyzing for QTLs
+auto_col_sha <- mqmautocofactors(aug_col_sha, 50)
+h3_auto_mqm_col_sha <- mqmscan(aug_col_sha, auto_col_sha, pheno.col = 4, 
+                               n.cluster = 4)
+
+set_col_sha <- mqmsetcofactors(aug_col_sha, 5)
+h3_set_mqm_col_sha <- mqmscan(aug_col_sha, set_col_sha, pheno.col = 4, 
+                              n.cluster = 4)
+summary(h3_auto_mqm_col_sha)
+summary(h3_set_mqm_col_sha)
+
+plot(h3_auto_mqm_col_sha, h3_set_mqm_col_sha, h3_out_imp, 
+     col = c("blue", "green", "red"), lty = 1:3)
 
 #QTL analysis on Height 2 - Height 1--------------------------------------------
 h1h2_out_imp <- scanone(col_sha, pheno.col = 6, method = "imp")
@@ -720,3 +757,5 @@ plot(bd_s2_col_sha_rq, main = "Bolt Days QTL Map")
 plot(h1h2_col_sha_rq, main = "Height 2 - Height 1 QTL Map")
 plot(h2h3_col_sha_rq, main = "Height 3 - Height 2 QTL Map")
 plot(h1h3_col_sha_rq1, main = "Height 3 - Height 1 QTL Map")
+
+
