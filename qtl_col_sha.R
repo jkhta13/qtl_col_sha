@@ -4,7 +4,7 @@ library(snow)
 require(snow)
 
 #Set working directory with data
-setwd("/Users/jkta/Desktop/data/")
+setwd("/Users/jkta/Desktop/Projects/NAM CAM/data/")
 
 #Data checking------------------------------------------------------------------
 
@@ -53,7 +53,7 @@ h2_perm95 <- summary(h2_perm_imp)[1]
 
 #Plotting the single-QTL analysis with LOD threshold; evidence of QTLs on 
 #Chr 1, 4, and 5 (possibly 2 on 5)
-plot(h2_out_imp, ylab = "LOD Score")
+plot(h2_out_imp, ylab = "LOD Score", bandcol = "gray90", main = "Imputation QTL on Height (Week 2)")
 abline(h = h2_perm95, lty = 2)
 summary(h2_out_imp, perms = h2_perm_imp, alpha = 0.05, pvalues = TRUE)
 
@@ -677,6 +677,11 @@ h2h3_col_sha_fq2 <- fitqtl(col_sha, pheno.col = 7, qtl = h2h3_col_sha_rq,
                            method = "imp", formula = y ~ Q1 * Q2 + Q3 + Q4)
 summary(h2h3_col_sha_fq2)
 
+h2h3_Q1_Q2 <- find.marker(col_sha, chr = c(1, 2), pos = c(29, 40.8))
+par(mfrow = c(1, 2))
+plot.pxg(col_sha, marker = h2h3_Q1_Q2, pheno.col = 7)
+effectplot(col_sha, mname1 = h2h3_Q1_Q2[1], mname2 = h2h3_Q1_Q2[2], 
+           pheno.col = 7, add.legend = FALSE)
 
 #QTL model based on 2D scan of Height 3 - Height 2------------------------------
 
@@ -758,4 +763,30 @@ plot(h1h2_col_sha_rq, main = "Height 2 - Height 1 QTL Map")
 plot(h2h3_col_sha_rq, main = "Height 3 - Height 2 QTL Map")
 plot(h1h3_col_sha_rq1, main = "Height 3 - Height 1 QTL Map")
 
+#Plots and shit
+setwd("/Users/jkta/Desktop/Projects/NAM CAM/graphs/")
+jpeg(filename = "col_sha_phenotypes.jpg")
+plot(col_sha)
+dev.off()
 
+tiff(filename = "col_sha_rf.tiff")
+plot.rf(col_sha)
+dev.off()
+
+tiff(filename = "col_sha_newmap.tiff")
+plot.map(col_sha, newmap)
+dev.off()
+
+tiff(filename = "col_sha_h2.tiff")
+plot(h2_out_imp, ylab = "LOD Score", bandcol = "gray90", 
+     main = "Imputation QTL on Height (Week 2)")
+abline(h = h2_perm95, lty = 2)
+dev.off()
+
+tiff(filename = "col_sha_QTL_map.tiff")
+plot(h2_s2_col_sha_rq, main = "Height 2 QTL Map")
+dev.off()
+
+tiff(filename = "col_sha_h2_2D.tiff")
+plot(h2_s2_col_sha)
+dev.off()
